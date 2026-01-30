@@ -25,7 +25,8 @@ class GeminiClientWrapper:
 
 AGENT_CONFIG = {
     "PROJECT_NAME": "mambda",
-    "IS_INSTALLABLE_PACKAGE": True, 
+    "IS_INSTALLABLE_PACKAGE": True,    
+    "PROJECT_EXTRAS": "[causal-conv1d]", 
     "REQUIREMENTS_FILE": "requirements.txt",
     "METRICS_OUTPUT_FILE": "metrics_output.txt",
     "PRIMARY_REQUIREMENTS_FILE": "primary_requirements.txt",
