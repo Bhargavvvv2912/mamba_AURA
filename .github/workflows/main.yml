@@ -13,8 +13,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🧹 0. Equalize Environment (Cleanup & Deps)
-        # This ensures both Pip and AURA have the same 'clean slate'
+      - name: 🧹 0. Equalize Environment
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
           sudo apt-get update && sudo apt-get install -y ninja-build
@@ -28,19 +27,24 @@ jobs:
       - name: 🧪 1. Run Pip Baseline (2024 State)
         run: |
           python -m venv baseline_env
+          # Order matters: Install build-time anchor first
+          ./baseline_env/bin/pip install torch==2.1.0 packaging
           ./baseline_env/bin/pip install -r requirements.txt
           ./baseline_env/bin/python validation_mamba.py
 
       - name: 💥 2. Run Naive Pip Upgrade (The Attack)
-        continue-on-error: true # We EXPECT this to fail
+        continue-on-error: true
         run: |
           python -m venv upgrade_env
+          # Upgrade the build-time anchor first to 2026 versions
+          ./upgrade_env/bin/pip install --upgrade torch packaging
           ./upgrade_env/bin/pip install --upgrade -r primary_requirements.txt
           ./upgrade_env/bin/python validation_mamba.py
 
       - name: 🤖 3. Run AURA Agent (The Healing Pass)
         run: |
-          # The agent now uses your 'Greedy Commitment' logic
+          # We manually prime the agent's environment so its 'probe' logic doesn't choke
+          pip install torch packaging ninja
           python -u dependency_agent.py | tee aura_execution.log
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
