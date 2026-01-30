@@ -1,0 +1,80 @@
+name: 🐍 AURA Modernization - Mamba (SSM)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  modernize-mamba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          # Crucial: Fetch all history and use a token that allows pushing
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🧹 Free Disk Space (Aggressive Cleanup)
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+
+      - name: 🛠️ Install System Build Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          ninja --version
+
+      - name: 🐍 Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: 🤖 Run AURA Agent
+        run: |
+          python -u dependency_agent.py | tee aura_mamba_log.txt
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AURA_INSTALLABLE: "True"
+          PROJECT_EXTRAS: "[causal-conv1d]" 
+          MAX_RUN_PASSES: 3
+          REQUIREMENTS_FILE: "requirements.txt"
+          PRIMARY_REQUIREMENTS_FILE: "primary_requirements.txt"
+
+      - name: 💾 Commit & Push Modernized Reqs
+        if: always() # Run even if previous steps (like validation) failed
+        run: |
+          # 1. Setup Identity
+          git config --global user.name 'AURA Agent'
+          git config --global user.email 'aura-agent@users.noreply.github.com'
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          # 2. Add files
+          git add requirements.txt aura_mamba_log.txt
+
+          # 3. Conditional Commit & Push
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(deps): Modernized Transformer logic [skip ci]"
+            git push origin main
+            echo "✅ Modernized requirements pushed to main."
+          else
+            echo "✨ No changes detected; skipping push."
+          fi
+
+      - name: 📤 Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mamba-modernization-results
+          path: |
+            requirements.txt
+            aura_mamba_log.txt

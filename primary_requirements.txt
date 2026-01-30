@@ -1,0 +1,5 @@
+torch
+triton
+ninja
+transformers
+causal-conv1d
