@@ -5,4 +5,4 @@ einops==0.7.0
 transformers==4.35.0
 packaging==23.2
 setuptools==68.2.2
-causal-conv1d==1.2.0
+causal-conv1d==1.2.0.post1
